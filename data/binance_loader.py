@@ -1,8 +1,12 @@
 from typing import Literal
 import pandas as pd
 from pathlib import Path
-from nautilus_trader.persistence.wranglers_v2 import TradeTickDataWranglerV2
-from nautilus_trader.model import TradeTick
+from nautilus_trader.persistence.wranglers_v2 import (
+    TradeTickDataWranglerV2,
+    BarDataWranglerV2,
+)
+from nautilus_trader.model import TradeTick, Bar
+import numpy as np
 
 FREQ_TYPE = Literal[
     "1s",
@@ -43,7 +47,7 @@ class BaseLoader:
             "Please implement the `_load_single` method in your loader subclass."
         )
 
-    def get_date_symbol(self, date_str: str, symbol: str, **kwargs) -> pd.DataFrame:
+    def get_date_symbol(self, date_str: str, symbol: str) -> pd.DataFrame:
         """
         Given the date, symbol, and frequency, load the DataFrame.
         This is also intended to be overridden by child classes.
@@ -100,7 +104,7 @@ class BinanceAggTradesLoader(BaseLoader):
 
 class BinanceKlineLoader(BaseLoader):
     header = [
-        "open time",
+        "timestamp",
         "open",
         "high",
         "low",
@@ -113,12 +117,14 @@ class BinanceKlineLoader(BaseLoader):
         "taker buy quote asset volume",
         "ignore",
     ]
-    date_columns = ["open time", "close time"]
+    date_columns = ["timestamp", "close time"]
 
     def __init__(
         self,
+        freq: FREQ_TYPE = "1s",
         base_dir: str = "submodules/binance-public-data/python/data/spot/daily/klines",
     ):
+        self.freq = freq
         super().__init__(base_dir=base_dir)
 
     @staticmethod
@@ -131,18 +137,36 @@ class BinanceKlineLoader(BaseLoader):
         if parse_date:
             for col in BinanceKlineLoader.date_columns:
                 df[col] = pd.to_datetime(df[col], unit="us")
-        return df.set_index("open time")
+        return df
 
-    def get_date_symbol(
-        self, date_str: str, symbol: str, freq: FREQ_TYPE
-    ) -> pd.DataFrame:
+    def get_date_symbol(self, date_str: str, symbol: str) -> pd.DataFrame:
         """
         Builds the file path from the base directory, symbol, freq, and date,
         then loads the file using `_load_single`.
         """
         return self._load_single(
-            self.base_dir / symbol / freq / f"{symbol}-{freq}-{date_str}.zip"
+            self.base_dir / symbol / self.freq / f"{symbol}-{self.freq}-{date_str}.zip"
         )
+
+    def get_date_symbol_ticks(
+        self, date_str: str, symbol_venue: str, ts_init_delta: int = 0
+    ) -> list[Bar]:
+        """
+        https://nautilustrader.io/docs/latest/api_reference/model/data#class-bartype
+        """
+        symbol, venue = symbol_venue.split(".")
+        trade_df = self.get_date_symbol(date_str=date_str, symbol=symbol)
+        trade_df["ts_recv"] = trade_df[
+            "timestamp"
+        ]  # TODO: maybe add simulate_recv_latency_us
+        # ValueError: Invalid column type `volume` at index 4: expected UInt64, found Float64
+        trade_df["volume"] = (trade_df["volume"] * 1e9).astype(np.uint64)
+        # TODO: able to use different aggregation rules
+        return BarDataWranglerV2(
+            bar_type=f"{symbol_venue}-1-SECOND-LAST-EXTERNAL",
+            price_precision=2,
+            size_precision=4,
+        ).from_pandas(trade_df, ts_init_delta=ts_init_delta)
 
 
 class BinanceTradesLoader(BaseLoader):
@@ -201,8 +225,11 @@ if __name__ == "__main__":
             "2025-01-01", "ETHUSDT.BINANCE"
         )[:10]
     )
+    print(kline_df := BinanceKlineLoader("1s").get_date_symbol("2025-01-01", "ETHUSDT"))
     print(
-        kline_df := BinanceKlineLoader().get_date_symbol("2025-01-01", "ETHUSDT", "1s")
+        bar_ticks := BinanceKlineLoader().get_date_symbol_ticks(
+            "2025-01-01", "ETHUSDT.BINANCE"
+        )[:10]
     )
     print(trades_df := BinanceTradesLoader().get_date_symbol("2025-01-01", "ETHUSDT"))
     print(
