@@ -5,8 +5,14 @@ from nautilus_trader.persistence.wranglers_v2 import (
     TradeTickDataWranglerV2,
     BarDataWranglerV2,
 )
+from nautilus_trader.core.nautilus_pyo3 import (
+    TradeTick as TradeTickV2,
+    Bar as BarV2,
+)
 from nautilus_trader.model import TradeTick, Bar
 import numpy as np
+
+# from nautilus_trader.persistence.wranglers import BarDataWrangler, TradeTickDataWrangler
 
 FREQ_TYPE = Literal[
     "1s",
@@ -31,6 +37,8 @@ FREQ_TYPE = Literal[
 class BaseLoader:
     """
     A base class to define the common structure for data loaders.
+
+    NOTE: wranglers_v2 will return pyo3 object, while wranglers will return nautilus_trader.core.data.Data (which is required by engine)
     """
 
     def __init__(self, base_dir: str):
@@ -90,16 +98,23 @@ class BinanceAggTradesLoader(BaseLoader):
         )
 
     def get_date_symbol_ticks(
-        self, date_str: str, symbol_venue: str, ts_init_delta: int = 0
-    ) -> list[TradeTick]:
+        self,
+        date_str: str,
+        symbol_venue: str,
+        ts_init_delta: int = 0,
+        use_pyo3: bool = False,
+    ) -> list[TradeTick | TradeTickV2]:
         symbol, venue = symbol_venue.split(".")
         trade_df = self.get_date_symbol(date_str=date_str, symbol=symbol)
         trade_df["ts_recv"] = trade_df[
             "timestamp"
         ]  # TODO: maybe add simulate_recv_latency_us
-        return TradeTickDataWranglerV2(
+        ticks = TradeTickDataWranglerV2(
             instrument_id=symbol_venue, price_precision=2, size_precision=4
         ).from_pandas(trade_df, ts_init_delta=ts_init_delta)
+        if use_pyo3:
+            return ticks
+        return [TradeTick.from_pyo3(tick) for tick in ticks]
 
 
 class BinanceKlineLoader(BaseLoader):
@@ -153,9 +168,10 @@ class BinanceKlineLoader(BaseLoader):
         date_str: str,
         symbol_venue: str,
         ts_init_delta: int = 0,
+        use_pyo3: bool = False,
         target_freq: str = "1-SECOND",
         need_agg: bool = False,
-    ) -> list[Bar]:
+    ) -> list[Bar | BarV2]:
         """
         https://nautilustrader.io/docs/latest/api_reference/model/data#class-bartype
 
@@ -164,18 +180,21 @@ class BinanceKlineLoader(BaseLoader):
         https://github.com/nautechsystems/nautilus_trader/blob/develop/examples/backtest/fx_ema_cross_bracket_gbpusd_bars_internal.py
         """
         symbol, venue = symbol_venue.split(".")
-        trade_df = self.get_date_symbol(date_str=date_str, symbol=symbol)
-        trade_df["ts_recv"] = trade_df[
+        ohlcv_df = self.get_date_symbol(date_str=date_str, symbol=symbol)
+        ohlcv_df["ts_recv"] = ohlcv_df[
             "timestamp"
         ]  # TODO: maybe add simulate_recv_latency_us
         # ValueError: Invalid column type `volume` at index 4: expected UInt64, found Float64
-        trade_df["volume"] = (trade_df["volume"] * 1e9).astype(np.uint64)
+        ohlcv_df["volume"] = (ohlcv_df["volume"] * 1e9).astype(np.uint64)
         # TODO: able to use different aggregation rules
-        return BarDataWranglerV2(
+        ticks = BarDataWranglerV2(
             bar_type=f"{symbol_venue}-{target_freq}-LAST-{'EXTERNAL' if not need_agg else 'INTERNAL'}",
             price_precision=2,
             size_precision=4,
-        ).from_pandas(trade_df, ts_init_delta=ts_init_delta)
+        ).from_pandas(ohlcv_df, ts_init_delta=ts_init_delta)
+        if use_pyo3:
+            return ticks
+        return [Bar.from_pyo3(tick) for tick in ticks]
 
 
 class BinanceTradesLoader(BaseLoader):
@@ -210,16 +229,23 @@ class BinanceTradesLoader(BaseLoader):
         )
 
     def get_date_symbol_ticks(
-        self, date_str: str, symbol_venue: str, ts_init_delta: int = 0
-    ) -> list[TradeTick]:
+        self,
+        date_str: str,
+        symbol_venue: str,
+        ts_init_delta: int = 0,
+        use_pyo3: bool = False,
+    ) -> list[TradeTick | TradeTickV2]:
         symbol, venue = symbol_venue.split(".")
         trade_df = self.get_date_symbol(date_str=date_str, symbol=symbol)
         trade_df["ts_recv"] = trade_df[
             "timestamp"
         ]  # TODO: maybe add simulate_recv_latency_us
-        return TradeTickDataWranglerV2(
+        ticks = TradeTickDataWranglerV2(
             instrument_id=symbol_venue, price_precision=2, size_precision=4
         ).from_pandas(trade_df, ts_init_delta=ts_init_delta)
+        if use_pyo3:
+            return ticks
+        return [TradeTick.from_pyo3(tick) for tick in ticks]
 
 
 if __name__ == "__main__":
@@ -237,8 +263,17 @@ if __name__ == "__main__":
     print(kline_df := BinanceKlineLoader("1s").get_date_symbol("2025-01-01", "ETHUSDT"))
     print(
         bar_ticks_1s := BinanceKlineLoader().get_date_symbol_ticks(
-            "2025-01-01", "ETHUSDT.BINANCE"
+            "2025-01-01", "ETHUSDT.BINANCE", use_pyo3=True
         )[:10]
+    )
+    print(
+        bar_ticks_1s_v1 := BinanceKlineLoader().get_date_symbol_ticks(
+            "2025-01-01", "ETHUSDT.BINANCE", use_pyo3=False
+        )[:10]
+    )
+    print(
+        isinstance(bar_ticks_1s[0], BarV2),
+        isinstance(bar_ticks_1s_v1[0], Bar),
     )
     # NOTE: seems not aggregate here, not sure if backtest engine will handle this
     print(

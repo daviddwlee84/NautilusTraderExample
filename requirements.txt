@@ -1,5 +1,9 @@
 nautilus_trader
 pandas
+numpy
+
+jupyterlab
+notebook
 ipdb
 
 # formatting
