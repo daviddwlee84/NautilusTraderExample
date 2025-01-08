@@ -1,7 +1,8 @@
 from typing import Literal
 import pandas as pd
 from pathlib import Path
-
+from nautilus_trader.persistence.wranglers_v2 import TradeTickDataWranglerV2
+from nautilus_trader.model import TradeTick
 
 FREQ_TYPE = Literal[
     "1s",
@@ -33,7 +34,7 @@ class BaseLoader:
         self.base_dir = Path(base_dir)
 
     @staticmethod
-    def _load_single(path: str, parse_date: bool = True) -> pd.DataFrame:
+    def _load_single(path: str | Path, parse_date: bool = True) -> pd.DataFrame:
         """
         Method intended to be overridden by child classes.
         Reads and returns a DataFrame.
@@ -54,13 +55,13 @@ class BaseLoader:
 
 class BinanceAggTradesLoader(BaseLoader):
     header = [
-        "aggregate tradeId",
+        "trade_id",
         "price",
         "quantity",
         "first tradeId",
         "last tradeId",
         "timestamp",
-        "was the buyer the maker",
+        "buyer_maker",
         "was the trade the best price match",
     ]
     date_columns = ["timestamp"]
@@ -72,17 +73,29 @@ class BinanceAggTradesLoader(BaseLoader):
         super().__init__(base_dir=base_dir)
 
     @staticmethod
-    def _load_single(path: str, parse_date: bool = True) -> pd.DataFrame:
+    def _load_single(path: str | Path, parse_date: bool = True) -> pd.DataFrame:
         df = pd.read_csv(path, header=None, names=BinanceAggTradesLoader.header)
         if parse_date:
             for col in BinanceAggTradesLoader.date_columns:
                 df[col] = pd.to_datetime(df[col], unit="us")
-        return df.set_index("aggregate tradeId")
+        return df
 
     def get_date_symbol(self, date_str: str, symbol: str) -> pd.DataFrame:
         return self._load_single(
             self.base_dir / symbol / f"{symbol}-aggTrades-{date_str}.zip"
         )
+
+    def get_date_symbol_ticks(
+        self, date_str: str, symbol_venue: str, ts_init_delta: int = 0
+    ) -> list[TradeTick]:
+        symbol, venue = symbol_venue.split(".")
+        trade_df = self.get_date_symbol(date_str=date_str, symbol=symbol)
+        trade_df["ts_recv"] = trade_df[
+            "timestamp"
+        ]  # TODO: maybe add simulate_recv_latency_us
+        return TradeTickDataWranglerV2(
+            instrument_id=symbol_venue, price_precision=2, size_precision=4
+        ).from_pandas(trade_df, ts_init_delta=ts_init_delta)
 
 
 class BinanceKlineLoader(BaseLoader):
@@ -109,7 +122,7 @@ class BinanceKlineLoader(BaseLoader):
         super().__init__(base_dir=base_dir)
 
     @staticmethod
-    def _load_single(path: str, parse_date: bool = True) -> pd.DataFrame:
+    def _load_single(path: str | Path, parse_date: bool = True) -> pd.DataFrame:
         """
         Reads a single kline CSV (possibly compressed), returning a DataFrame
         with time columns parsed as datetime (microseconds).
@@ -134,15 +147,15 @@ class BinanceKlineLoader(BaseLoader):
 
 class BinanceTradesLoader(BaseLoader):
     header = [
-        "tradeId",
+        "trade_id",
         "price",
-        "qty",
+        "quantity",
         "quoteQty",
-        "time",
-        "isBuyerMaker",
+        "timestamp",
+        "buyer_maker",
         "isBestMatch",
     ]
-    date_columns = ["time"]
+    date_columns = ["timestamp"]
 
     def __init__(
         self,
@@ -151,17 +164,29 @@ class BinanceTradesLoader(BaseLoader):
         super().__init__(base_dir=base_dir)
 
     @staticmethod
-    def _load_single(path: str, parse_date: bool = True) -> pd.DataFrame:
+    def _load_single(path: str | Path, parse_date: bool = True) -> pd.DataFrame:
         df = pd.read_csv(path, header=None, names=BinanceTradesLoader.header)
         if parse_date:
             for col in BinanceTradesLoader.date_columns:
                 df[col] = pd.to_datetime(df[col], unit="us")
-        return df.set_index("tradeId")
+        return df
 
     def get_date_symbol(self, date_str: str, symbol: str) -> pd.DataFrame:
         return self._load_single(
             self.base_dir / symbol / f"{symbol}-trades-{date_str}.zip"
         )
+
+    def get_date_symbol_ticks(
+        self, date_str: str, symbol_venue: str, ts_init_delta: int = 0
+    ) -> list[TradeTick]:
+        symbol, venue = symbol_venue.split(".")
+        trade_df = self.get_date_symbol(date_str=date_str, symbol=symbol)
+        trade_df["ts_recv"] = trade_df[
+            "timestamp"
+        ]  # TODO: maybe add simulate_recv_latency_us
+        return TradeTickDataWranglerV2(
+            instrument_id=symbol_venue, price_precision=2, size_precision=4
+        ).from_pandas(trade_df, ts_init_delta=ts_init_delta)
 
 
 if __name__ == "__main__":
@@ -172,9 +197,19 @@ if __name__ == "__main__":
         )
     )
     print(
+        aggTrades_ticks := BinanceAggTradesLoader().get_date_symbol_ticks(
+            "2025-01-01", "ETHUSDT.BINANCE"
+        )[:10]
+    )
+    print(
         kline_df := BinanceKlineLoader().get_date_symbol("2025-01-01", "ETHUSDT", "1s")
     )
     print(trades_df := BinanceTradesLoader().get_date_symbol("2025-01-01", "ETHUSDT"))
+    print(
+        trades_ticks := BinanceTradesLoader().get_date_symbol_ticks(
+            "2025-01-01", "ETHUSDT.BINANCE"
+        )[:10]
+    )
     import ipdb
 
     ipdb.set_trace()
