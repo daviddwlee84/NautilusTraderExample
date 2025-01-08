@@ -2,6 +2,9 @@
 
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
+> - Recommend use PyCharm to edit Nautilus Trader's code for better auto-completion of Cython modules
+> - I use [`mamba`](https://github.com/mamba-org/mamba) (a faster `conda`) to manage Python version, and manage packages using `pip`
+
 ## Getting Started
 
 Python 3.11+
@@ -27,9 +30,9 @@ python submodules/binance-public-data/python/download-trade.py -d 2025-01-01 -s 
 
 ## Todo
 
-- [ ] Able to load Binance Public Data into Nautilus Trader
-  - [ ] Bar
-  - [ ] TradeTick
+- [X] Able to load Binance Public Data into Nautilus Trader
+  - [X] Bar
+  - [X] TradeTick
 - [ ] Basic strategy backtesting using pre-defined data
 - [ ] Custom data backtesting
 - [ ] Unify and use better column names (currently following binance-public-data repository's README)
