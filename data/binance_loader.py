@@ -149,10 +149,19 @@ class BinanceKlineLoader(BaseLoader):
         )
 
     def get_date_symbol_ticks(
-        self, date_str: str, symbol_venue: str, ts_init_delta: int = 0
+        self,
+        date_str: str,
+        symbol_venue: str,
+        ts_init_delta: int = 0,
+        target_freq: str = "1-SECOND",
+        need_agg: bool = False,
     ) -> list[Bar]:
         """
         https://nautilustrader.io/docs/latest/api_reference/model/data#class-bartype
+
+        https://nautilustrader.io/docs/latest/concepts/data/#bars-and-aggregation
+        https://github.com/nautechsystems/nautilus_trader/blob/develop/examples/backtest/fx_ema_cross_bracket_gbpusd_bars_external.py
+        https://github.com/nautechsystems/nautilus_trader/blob/develop/examples/backtest/fx_ema_cross_bracket_gbpusd_bars_internal.py
         """
         symbol, venue = symbol_venue.split(".")
         trade_df = self.get_date_symbol(date_str=date_str, symbol=symbol)
@@ -163,7 +172,7 @@ class BinanceKlineLoader(BaseLoader):
         trade_df["volume"] = (trade_df["volume"] * 1e9).astype(np.uint64)
         # TODO: able to use different aggregation rules
         return BarDataWranglerV2(
-            bar_type=f"{symbol_venue}-1-SECOND-LAST-EXTERNAL",
+            bar_type=f"{symbol_venue}-{target_freq}-LAST-{'EXTERNAL' if not need_agg else 'INTERNAL'}",
             price_precision=2,
             size_precision=4,
         ).from_pandas(trade_df, ts_init_delta=ts_init_delta)
@@ -227,8 +236,14 @@ if __name__ == "__main__":
     )
     print(kline_df := BinanceKlineLoader("1s").get_date_symbol("2025-01-01", "ETHUSDT"))
     print(
-        bar_ticks := BinanceKlineLoader().get_date_symbol_ticks(
+        bar_ticks_1s := BinanceKlineLoader().get_date_symbol_ticks(
             "2025-01-01", "ETHUSDT.BINANCE"
+        )[:10]
+    )
+    # NOTE: seems not aggregate here, not sure if backtest engine will handle this
+    print(
+        bar_ticks_1m := BinanceKlineLoader().get_date_symbol_ticks(
+            "2025-01-01", "ETHUSDT.BINANCE", target_freq="1-MINUTE", need_agg=True
         )[:10]
     )
     print(trades_df := BinanceTradesLoader().get_date_symbol("2025-01-01", "ETHUSDT"))
