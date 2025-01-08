@@ -13,11 +13,14 @@ Data
 
 ```bash
 # NOTE: Pandas can load csv from zip directly
-python submodules/binance-public-data/python/download-trade.py -d 2025-01-01 -s ETHUSDT -t spot
-# unzip submodules/binance-public-data/python/data/spot/daily/trades/ETHUSDT/ETHUSDT-trades-2025-01-01.zip -d submodules/binance-public-data/python/data/spot/daily/trades/ETHUSDT/
+python submodules/binance-public-data/python/download-aggTrade.py -d 2025-01-01 -s ETHUSDT -t spot
+# unzip submodules/binance-public-data/python/data/spot/daily/aggTrades/ETHUSDT/ETHUSDT-aggTrades-2025-01-01.zip -d submodules/binance-public-data/python/data/spot/daily/aggTrades/ETHUSDT/
 
 python submodules/binance-public-data/python/download-kline.py -d 2025-01-01 -s ETHUSDT -t spot -i 1s
 # unzip submodules/binance-public-data/python/data/spot/daily/klines/ETHUSDT/1s/ETHUSDT-1s-2025-01-01.zip -d submodules/binance-public-data/python/data/spot/daily/klines/ETHUSDT/1s/
+
+python submodules/binance-public-data/python/download-trade.py -d 2025-01-01 -s ETHUSDT -t spot
+# unzip submodules/binance-public-data/python/data/spot/daily/trades/ETHUSDT/ETHUSDT-trades-2025-01-01.zip -d submodules/binance-public-data/python/data/spot/daily/trades/ETHUSDT/
 ```
 
 ## Todo
@@ -27,6 +30,7 @@ python submodules/binance-public-data/python/download-kline.py -d 2025-01-01 -s 
   - [ ] TradeTick
 - [ ] Basic strategy backtesting using pre-defined data
 - [ ] Custom data backtesting
+- [ ] Unify and use better column names (currently following binance-public-data repository's README)
 
 ## Resources
 

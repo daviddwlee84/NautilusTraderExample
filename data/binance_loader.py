@@ -52,6 +52,39 @@ class BaseLoader:
         )
 
 
+class BinanceAggTradesLoader(BaseLoader):
+    header = [
+        "aggregate tradeId",
+        "price",
+        "quantity",
+        "first tradeId",
+        "last tradeId",
+        "timestamp",
+        "was the buyer the maker",
+        "was the trade the best price match",
+    ]
+    date_columns = ["timestamp"]
+
+    def __init__(
+        self,
+        base_dir: str = "submodules/binance-public-data/python/data/spot/daily/aggTrades",
+    ):
+        super().__init__(base_dir=base_dir)
+
+    @staticmethod
+    def _load_single(path: str, parse_date: bool = True) -> pd.DataFrame:
+        df = pd.read_csv(path, header=None, names=BinanceAggTradesLoader.header)
+        if parse_date:
+            for col in BinanceAggTradesLoader.date_columns:
+                df[col] = pd.to_datetime(df[col], unit="us")
+        return df.set_index("aggregate tradeId")
+
+    def get_date_symbol(self, date_str: str, symbol: str) -> pd.DataFrame:
+        return self._load_single(
+            self.base_dir / symbol / f"{symbol}-aggTrades-{date_str}.zip"
+        )
+
+
 class BinanceKlineLoader(BaseLoader):
     header = [
         "open time",
@@ -99,11 +132,49 @@ class BinanceKlineLoader(BaseLoader):
         )
 
 
+class BinanceTradesLoader(BaseLoader):
+    header = [
+        "tradeId",
+        "price",
+        "qty",
+        "quoteQty",
+        "time",
+        "isBuyerMaker",
+        "isBestMatch",
+    ]
+    date_columns = ["time"]
+
+    def __init__(
+        self,
+        base_dir: str = "submodules/binance-public-data/python/data/spot/daily/trades",
+    ):
+        super().__init__(base_dir=base_dir)
+
+    @staticmethod
+    def _load_single(path: str, parse_date: bool = True) -> pd.DataFrame:
+        df = pd.read_csv(path, header=None, names=BinanceTradesLoader.header)
+        if parse_date:
+            for col in BinanceTradesLoader.date_columns:
+                df[col] = pd.to_datetime(df[col], unit="us")
+        return df.set_index("tradeId")
+
+    def get_date_symbol(self, date_str: str, symbol: str) -> pd.DataFrame:
+        return self._load_single(
+            self.base_dir / symbol / f"{symbol}-trades-{date_str}.zip"
+        )
+
+
 if __name__ == "__main__":
     # python -m data.binance_loader
     print(
+        aggTrades_df := BinanceAggTradesLoader().get_date_symbol(
+            "2025-01-01", "ETHUSDT"
+        )
+    )
+    print(
         kline_df := BinanceKlineLoader().get_date_symbol("2025-01-01", "ETHUSDT", "1s")
     )
+    print(trades_df := BinanceTradesLoader().get_date_symbol("2025-01-01", "ETHUSDT"))
     import ipdb
 
     ipdb.set_trace()
