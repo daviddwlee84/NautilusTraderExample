@@ -1,3 +1,6 @@
 nautilus_trader
 pandas
 ipdb
+
+# formatting
+black
