@@ -9,6 +9,17 @@ pip install -r requirements.txt
 pip install -r submodules/binance-public-data/python/requirements.txt
 ```
 
+Data
+
+```bash
+# NOTE: Pandas can load csv from zip directly
+python submodules/binance-public-data/python/download-trade.py -d 2025-01-01 -s ETHUSDT -t spot
+# unzip submodules/binance-public-data/python/data/spot/daily/trades/ETHUSDT/ETHUSDT-trades-2025-01-01.zip -d submodules/binance-public-data/python/data/spot/daily/trades/ETHUSDT/
+
+python submodules/binance-public-data/python/download-kline.py -d 2025-01-01 -s ETHUSDT -t spot -i 1s
+# unzip submodules/binance-public-data/python/data/spot/daily/klines/ETHUSDT/1s/ETHUSDT-1s-2025-01-01.zip -d submodules/binance-public-data/python/data/spot/daily/klines/ETHUSDT/1s/
+```
+
 ## Todo
 
 - [ ] Able to load Binance Public Data into Nautilus Trader
