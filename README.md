@@ -4,6 +4,11 @@
 
 Python 3.11+
 
+```bash
+pip install -r requirements.txt
+pip install -r submodules/binance-public-data/python/requirements.txt
+```
+
 ## Todo
 
 - [ ] Able to load Binance Public Data into Nautilus Trader
@@ -25,8 +30,8 @@ Python 3.11+
 Example
 
 - Order Book Imbalance
-  - [nautilus_trader/examples/backtest/crypto_orderbook_imbalance.py at develop · nautechsystems/nautilus_trader](https://github.com/nautechsystems/nautilus_trader/blob/develop/examples/backtest/crypto_orderbook_imbalance.py) - Use `BacktestEngine`
-  - [Backtest: Binance OrderBook data | NautilusTrader Documentation](https://nautilustrader.io/docs/latest/tutorials/backtest_binance_orderbook) - Use `ImportableStrategyConfig` and `BacktestNode`
+  - [nautilus_trader/examples/backtest/crypto_orderbook_imbalance.py at develop · nautechsystems/nautilus_trader](https://github.com/nautechsystems/nautilus_trader/blob/develop/examples/backtest/crypto_orderbook_imbalance.py) - Use `BacktestEngine` ([low-level API](https://nautilustrader.io/docs/latest/getting_started/backtest_low_level/))
+  - [Backtest: Binance OrderBook data | NautilusTrader Documentation](https://nautilustrader.io/docs/latest/tutorials/backtest_binance_orderbook) - Use `ImportableStrategyConfig` and `BacktestNode` ([high-level API](https://nautilustrader.io/docs/latest/getting_started/backtest_high_level/))
 - Signal Strategy
   - [nautilus_trader/nautilus_trader/examples/strategies/signal_strategy.py at develop · nautechsystems/nautilus_trader](https://github.com/nautechsystems/nautilus_trader/blob/develop/nautilus_trader/examples/strategies/signal_strategy.py)
 
