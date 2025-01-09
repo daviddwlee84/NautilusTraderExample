@@ -28,6 +28,13 @@ python submodules/binance-public-data/python/download-trade.py -d 2025-01-01 -s 
 # unzip submodules/binance-public-data/python/data/spot/daily/trades/ETHUSDT/ETHUSDT-trades-2025-01-01.zip -d submodules/binance-public-data/python/data/spot/daily/trades/ETHUSDT/
 ```
 
+Examples
+
+```bash
+python -m data.binance_loader
+python -m examples.backtest_eurusd_bar_low_level_api
+```
+
 ## Todo
 
 - [X] Able to load Binance Public Data into Nautilus Trader

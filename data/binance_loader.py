@@ -171,6 +171,8 @@ class BinanceKlineLoader(BaseLoader):
         use_pyo3: bool = False,
         target_freq: str = "1-SECOND",
         need_agg: bool = False,
+        price_precision: int = 2,
+        size_precision: int = 5,
     ) -> list[Bar | BarV2]:
         """
         https://nautilustrader.io/docs/latest/api_reference/model/data#class-bartype
@@ -189,8 +191,8 @@ class BinanceKlineLoader(BaseLoader):
         # TODO: able to use different aggregation rules
         ticks = BarDataWranglerV2(
             bar_type=f"{symbol_venue}-{target_freq}-LAST-{'EXTERNAL' if not need_agg else 'INTERNAL'}",
-            price_precision=2,
-            size_precision=4,
+            price_precision=price_precision,
+            size_precision=size_precision,
         ).from_pandas(ohlcv_df, ts_init_delta=ts_init_delta)
         if use_pyo3:
             return ticks
