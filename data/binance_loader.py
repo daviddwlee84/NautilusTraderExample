@@ -103,6 +103,8 @@ class BinanceAggTradesLoader(BaseLoader):
         symbol_venue: str,
         ts_init_delta: int = 0,
         use_pyo3: bool = False,
+        price_precision: int = 2,
+        size_precision: int = 5,
     ) -> list[TradeTick | TradeTickV2]:
         symbol, venue = symbol_venue.split(".")
         trade_df = self.get_date_symbol(date_str=date_str, symbol=symbol)
@@ -110,7 +112,9 @@ class BinanceAggTradesLoader(BaseLoader):
             "timestamp"
         ]  # TODO: maybe add simulate_recv_latency_us
         ticks = TradeTickDataWranglerV2(
-            instrument_id=symbol_venue, price_precision=2, size_precision=4
+            instrument_id=symbol_venue,
+            price_precision=price_precision,
+            size_precision=size_precision,
         ).from_pandas(trade_df, ts_init_delta=ts_init_delta)
         if use_pyo3:
             return ticks
@@ -241,6 +245,8 @@ class BinanceTradesLoader(BaseLoader):
         symbol_venue: str,
         ts_init_delta: int = 0,
         use_pyo3: bool = False,
+        price_precision: int = 2,
+        size_precision: int = 5,
     ) -> list[TradeTick | TradeTickV2]:
         symbol, venue = symbol_venue.split(".")
         trade_df = self.get_date_symbol(date_str=date_str, symbol=symbol)
@@ -248,7 +254,9 @@ class BinanceTradesLoader(BaseLoader):
             "timestamp"
         ]  # TODO: maybe add simulate_recv_latency_us
         ticks = TradeTickDataWranglerV2(
-            instrument_id=symbol_venue, price_precision=2, size_precision=4
+            instrument_id=symbol_venue,
+            price_precision=price_precision,
+            size_precision=size_precision,
         ).from_pandas(trade_df, ts_init_delta=ts_init_delta)
         if use_pyo3:
             return ticks

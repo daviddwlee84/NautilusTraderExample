@@ -33,6 +33,7 @@ Examples
 ```bash
 python -m data.binance_loader
 python -m examples.backtest_eurusd_bar_low_level_api
+python -m examples.backtest_eurusd_trade_high_level_api
 ```
 
 ## Todo
@@ -40,7 +41,7 @@ python -m examples.backtest_eurusd_bar_low_level_api
 - [X] Able to load Binance Public Data into Nautilus Trader
   - [X] Bar
   - [X] TradeTick
-- [ ] Basic strategy backtesting using pre-defined data
+- [X] Basic strategy backtesting using pre-defined data
 - [ ] Custom data backtesting
 - [ ] Unify and use better column names (currently following binance-public-data repository's README)
 
@@ -68,3 +69,5 @@ Example
   - [How to Download Historical Market Data on Binance? | Binance Support](https://www.binance.com/en/support/faq/how-to-download-historical-market-data-on-binance-5810ae42176b4770b880ce1f14932262)
   - [binance/binance-public-data: Details on how to get Binance public data](https://github.com/binance/binance-public-data)
     - [Binance Data Collection](https://data.binance.vision/?prefix=data/spot/daily/trades/BTCUSDT/)
+- FX
+  - [Download Free Forex Historical Data – HistData.com](https://www.histdata.com/download-free-forex-historical-data/?/ascii/tick-data-quotes/)
