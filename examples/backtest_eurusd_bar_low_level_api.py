@@ -89,6 +89,7 @@ def get_strategy(instrument: Instrument, use_1m: bool = False):
 
 if __name__ == "__main__":
 
+    INIT_CASH = 10_000
     USE_1M = False
 
     engine = get_engine(log_level="ERROR")
@@ -115,7 +116,7 @@ if __name__ == "__main__":
         base_currency=None,
         starting_balances=[
             Money(1_000_000, ETHUSDT_BINANCE.base_currency),
-            Money(10_000, ETHUSDT_BINANCE.quote_currency),
+            Money(INIT_CASH, ETHUSDT_BINANCE.quote_currency),
         ],
         fill_model=fill_model,
     )
@@ -142,8 +143,77 @@ if __name__ == "__main__":
         account_report := engine.trader.generate_account_report(ETHUSDT_BINANCE.venue)
     )
     print(order_fills_report := engine.trader.generate_order_fills_report())
-    # BUG: viewing positions_report in ipdb cause error: BlockingIOError: [Errno 35] write could not complete without blocking
+    # BUG: viewing positions_report and order_fills_report directly in ipdb will cause error:
+    # BlockingIOError: [Errno 35] write could not complete without blocking
     print(positions_report := engine.trader.generate_positions_report())
+
+    import os
+
+    # BUG: numba.core.errors.TypingError: Failed in nopython mode pipeline (step: nopython frontend)
+    os.environ["NUMBA_DISABLE_JIT"] = "1"
+    import vectorbt as vbt
+    import numpy as np
+
+    USE_TIME_INDEX = True
+    if USE_TIME_INDEX:
+        order_df = order_fills_report.reset_index().set_index("ts_init")
+    else:
+        order_df = order_fills_report
+
+    USE_DETAIL_PRICE = False
+    if USE_DETAIL_PRICE:
+        import pandas as pd
+        from vectorbt.base.reshape_fns import broadcast_to
+
+        close_price = pd.Series({tick.ts_init: tick.close for tick in ticks})
+        close_price.index = pd.to_datetime(close_price.index, unit="ns", utc=True)
+
+        # TODO: solve this
+        # BUG: ValueError: shape mismatch: objects cannot be broadcast to a single shape.  Mismatch is between arg 0 with shape (4756,) and arg 16 with shape (86400,).
+        # NOTE: there exist duplicate ts_init among different orders (non-unique)
+        pf = vbt.Portfolio.from_orders(
+            close=close_price,
+            price=order_df.avg_px.astype(float),
+            size=order_df.filled_qty.astype(float)
+            * np.where(order_df.side.eq("BUY"), 1, -1),
+            fees=ETHUSDT_BINANCE.taker_fee,
+            slippage=order_df.slippage.astype(float),
+            init_cash=INIT_CASH,
+            freq="1s" if not USE_1M else "1m",
+        )
+    else:
+        pf = vbt.Portfolio.from_orders(
+            order_df.avg_px.astype(float),
+            size=order_df.filled_qty.astype(float)
+            * np.where(order_df.side.eq("BUY"), 1, -1),
+            fees=ETHUSDT_BINANCE.taker_fee,
+            slippage=order_df.slippage.astype(float),
+            init_cash=INIT_CASH,
+            freq="1s" if not USE_1M else "1m",
+        )
+
+    print(pf.stats())
+    pf.plot().show()
+    # pf.plot(
+    #     subplots=[
+    #         "orders",
+    #         "trade_pnl",
+    #         "cum_returns",
+    #         "drawdowns",
+    #         "underwater",
+    #         "asset_flow",
+    #         "asset_value",
+    #         "assets",
+    #         "cash",
+    #         "cash_flow",
+    #         "gross_exposure",
+    #         "net_exposure",
+    #         # "position_pnl",
+    #         # "positions",
+    #         "trades",
+    #         "value",
+    #     ]
+    # ).show()
 
     import ipdb
 

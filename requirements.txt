@@ -1,10 +1,16 @@
+# main
 nautilus_trader
 pandas
 numpy
 
+# experiment
 jupyterlab
 notebook
 ipdb
+
+# plotting
+# vectorbt[full]
+vectorbt
 
 # formatting
 black
