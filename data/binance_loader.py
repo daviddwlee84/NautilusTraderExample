@@ -12,7 +12,7 @@ from nautilus_trader.core.nautilus_pyo3 import (
 from nautilus_trader.model import TradeTick, Bar
 import numpy as np
 
-# from nautilus_trader.persistence.wranglers import BarDataWrangler, TradeTickDataWrangler
+# from nautilus_trader.persistence.wranglers import BarDataWrangler, TradeTickDataWrangler, QuoteTickDataWrangler
 
 FREQ_TYPE = Literal[
     "1s",
@@ -180,6 +180,11 @@ class BinanceKlineLoader(BaseLoader):
         https://nautilustrader.io/docs/latest/concepts/data/#bars-and-aggregation
         https://github.com/nautechsystems/nautilus_trader/blob/develop/examples/backtest/fx_ema_cross_bracket_gbpusd_bars_external.py
         https://github.com/nautechsystems/nautilus_trader/blob/develop/examples/backtest/fx_ema_cross_bracket_gbpusd_bars_internal.py
+
+        TODO:
+        Able to return
+        QuoteTickDataWrangler.process_bar_data()
+        => Bar.is_single_price() == False
         """
         symbol, venue = symbol_venue.split(".")
         ohlcv_df = self.get_date_symbol(date_str=date_str, symbol=symbol)

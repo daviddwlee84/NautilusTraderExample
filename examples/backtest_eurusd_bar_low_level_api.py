@@ -1,3 +1,4 @@
+from typing import Literal
 from nautilus_trader.model import BarType, Money
 from nautilus_trader.model.instruments import Instrument
 
@@ -64,25 +65,50 @@ def get_data(instrument: Instrument, use_1m: bool = False):
     return ticks
 
 
-def get_strategy(instrument: Instrument, use_1m: bool = False):
+def get_strategy(
+    instrument: Instrument,
+    use_1m: bool = False,
+    strategy_name: Literal["ema", "talib"] = "ema",
+):
     from decimal import Decimal
-    from nautilus_trader.examples.strategies.ema_cross import EMACross, EMACrossConfig
 
-    # Configure your strategy
-    config = EMACrossConfig(
-        instrument_id=instrument.id,
-        bar_type=(
-            BarType.from_str(f"{instrument.id}-1-SECOND-LAST-EXTERNAL")
-            if not use_1m
-            else BarType.from_str(f"{instrument.id}-1-MINUTE-LAST-INTERNAL")
-        ),
-        fast_ema_period=10,
-        slow_ema_period=20,
-        trade_size=Decimal(1),
-    )
+    match strategy_name:
+        case "ema":
+            from nautilus_trader.examples.strategies.ema_cross import (
+                EMACross,
+                EMACrossConfig,
+            )
 
-    # Instantiate and add your strategy
-    strategy = EMACross(config=config)
+            # Configure your strategy
+            config = EMACrossConfig(
+                instrument_id=instrument.id,
+                bar_type=(
+                    BarType.from_str(f"{instrument.id}-1-SECOND-LAST-EXTERNAL")
+                    if not use_1m
+                    else BarType.from_str(f"{instrument.id}-1-MINUTE-LAST-INTERNAL")
+                ),
+                fast_ema_period=10,
+                slow_ema_period=20,
+                trade_size=Decimal(1),
+            )
+
+            # Instantiate and add your strategy
+            strategy = EMACross(config=config)
+        case "talib":
+            # https://github.com/nautechsystems/nautilus_trader/blob/develop/examples/backtest/fx_talib_gbpusd_bars_internal.py#L26
+            from nautilus_trader.examples.strategies.talib_strategy import (
+                TALibStrategy,
+                TALibStrategyConfig,
+            )
+
+            config = TALibStrategyConfig(
+                bar_type=(
+                    BarType.from_str(f"{instrument.id}-1-SECOND-LAST-EXTERNAL")
+                    if not use_1m
+                    else BarType.from_str(f"{instrument.id}-1-MINUTE-LAST-INTERNAL")
+                )
+            )
+            strategy = TALibStrategy(config=config)
 
     return strategy
 
@@ -129,13 +155,20 @@ if __name__ == "__main__":
     engine.add_data(ticks)
 
     # Add strategy
-    strategy = get_strategy(ETHUSDT_BINANCE, use_1m=USE_1M)
-    engine.add_strategy(strategy=strategy)
+    if not ticks[0].is_single_price():
+        # NOTE: talib strategy will skip all "single price bar"
+        talib_strategy = get_strategy(
+            ETHUSDT_BINANCE, use_1m=USE_1M, strategy_name="talib"
+        )
+        engine.add_strategy(strategy=talib_strategy)
+    else:
+        ema_strategy = get_strategy(ETHUSDT_BINANCE, use_1m=USE_1M, strategy_name="ema")
+        engine.add_strategy(strategy=ema_strategy)
 
     import time
 
     start_time = time.perf_counter()
-    # Run backtest
+    # Run the engine (from start to end of data)
     engine.run()
     print("Time:", time.perf_counter() - start_time)
 
@@ -147,9 +180,15 @@ if __name__ == "__main__":
     # BlockingIOError: [Errno 35] write could not complete without blocking
     print(positions_report := engine.trader.generate_positions_report())
 
+    # For repeated backtest runs make sure to reset the engine
+    engine.reset()
+
+    # Good practice to dispose of the object when done
+    engine.dispose()
+
     import os
 
-    # BUG: numba.core.errors.TypingError: Failed in nopython mode pipeline (step: nopython frontend)
+    # BUG (solved by disable numba): numba.core.errors.TypingError: Failed in nopython mode pipeline (step: nopython frontend)
     os.environ["NUMBA_DISABLE_JIT"] = "1"
     import vectorbt as vbt
     import numpy as np
