@@ -1,0 +1,9 @@
+---
+description: Backtesting and portfolio optimization with VectorBT
+globs: **/*.py
+alwaysApply: false
+---
+- Leverage VectorBT's parallel processing for faster backtesting
+- Use VectorBT's built-in indicators and strategies as a starting point
+- Implement proper risk management using VectorBT's tools
+- Visualize results using VectorBT's plotting capabilities

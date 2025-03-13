@@ -1,0 +1,9 @@
+---
+description: Efficient data manipulation and analysis with Pandas
+globs: **/*.py
+alwaysApply: false
+---
+- Use vectorized operations for better performance
+- Avoid chained indexing; use .loc[] or .iloc[] instead
+- Utilize Pandas' built-in functions for common data operations
+- Handle missing data appropriately using Pandas' methods

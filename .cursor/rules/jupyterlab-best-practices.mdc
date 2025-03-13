@@ -1,0 +1,9 @@
+---
+description: Interactive data exploration and visualization with JupyterLab
+globs: **/*.ipynb
+alwaysApply: false
+---
+- Use JupyterLab's interactive widgets for dynamic data exploration
+- Organize notebooks into logical sections with clear headings
+- Utilize JupyterLab's extensions for enhanced functionality
+- Version control notebooks using JupyterLab's Git integration

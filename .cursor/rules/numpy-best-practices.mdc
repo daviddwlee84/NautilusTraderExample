@@ -1,0 +1,9 @@
+---
+description: Optimizing numerical computations with NumPy
+globs: **/*.py
+alwaysApply: false
+---
+- Use NumPy's universal functions (ufuncs) for element-wise operations
+- Leverage NumPy's broadcasting for efficient array operations
+- Utilize NumPy's advanced indexing and slicing techniques
+- Optimize memory usage by using appropriate data types

@@ -5,7 +5,7 @@
 > - Recommend use PyCharm to edit Nautilus Trader's code for better auto-completion of Cython modules
 > - I use [`uv`](https://github.com/astral-sh/uv) to manage Python version and manage packages at once. (Which is recommend [officially](https://nautilustrader.io/docs/latest/developer_guide/environment_setup))
 > - ~~I use [`mamba`](https://github.com/mamba-org/mamba) (a faster `conda`) to manage Python version, and manage packages using `pip`~~
-> - If you use Cursor, I recommend adding `https://nautilustrader.io/docs/latest/` to [Docs](https://docs.cursor.com/context/@-symbols/@-docs#manage-custom-docs)
+> - If you use Cursor, I recommend adding `https://nautilustrader.io/docs/latest/` to [Docs](https://docs.cursor.com/context/@-symbols/@-docs#manage-custom-docs). I generate some [`.cursor/rules`](./.cursor/rules/) using [`requirements.txt`](requirements.txt) with [cursor.directory](https://cursor.directory/generate).
 
 ## Getting Started
 

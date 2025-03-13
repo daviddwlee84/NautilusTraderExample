@@ -1,0 +1,9 @@
+---
+description: Best practices for using Nautilus Trader in algorithmic trading
+globs: **/*.py
+alwaysApply: false
+---
+- Use the Nautilus Trader's event-driven architecture for real-time data processing
+- Implement proper risk management strategies using Nautilus Trader's built-in tools
+- Utilize Nautilus Trader's backtesting capabilities for strategy validation
+- Ensure proper logging and monitoring of trading activities

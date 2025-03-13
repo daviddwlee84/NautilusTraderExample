@@ -1,0 +1,9 @@
+---
+description: Consistent code formatting with Black
+globs: **/*.py
+alwaysApply: false
+---
+- Configure Black to run automatically in your CI/CD pipeline
+- Use Black's default settings for consistent formatting across projects
+- Integrate Black with your IDE for real-time formatting
+- Ensure all team members use the same version of Black

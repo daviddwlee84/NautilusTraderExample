@@ -1,0 +1,9 @@
+---
+description: Managing environment variables with Python-dotenv
+globs: **/*.py
+alwaysApply: false
+---
+- Keep sensitive information out of version control using .env files
+- Use .env.example to document required environment variables
+- Load environment variables early in your application
+- Use type hints when accessing environment variables

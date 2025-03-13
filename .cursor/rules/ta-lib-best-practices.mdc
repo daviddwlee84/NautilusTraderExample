@@ -1,0 +1,9 @@
+---
+description: Technical analysis with TA-Lib on Apple Silicon
+globs: **/*.py
+alwaysApply: false
+---
+- Ensure proper installation and environment setup for Apple Silicon
+- Use TA-Lib functions for consistent technical indicator calculations
+- Combine multiple indicators for more robust analysis
+- Optimize performance by caching indicator results when possible
