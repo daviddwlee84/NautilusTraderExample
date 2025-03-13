@@ -304,6 +304,3 @@ print(fills_report := engine.trader.generate_fills_report())
 
 # BlockingIOError: [Errno 35] write could not complete without blocking
 orders_report.to_csv("orders_report.csv")
-import ipdb
-
-ipdb.set_trace()

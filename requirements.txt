@@ -16,11 +16,12 @@ jupyterlab
 notebook
 ipdb
 
-# plotting
+# plotting / view orders
 # vectorbt[full]
 # Python 3.12 support added in 0.26.0
 # https://github.com/polakowo/vectorbt/issues/680#issuecomment-1925327777
 vectorbt>=0.26.0
+kaleido==0.2.0
 
 # formatting
 black

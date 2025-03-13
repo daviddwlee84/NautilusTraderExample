@@ -42,9 +42,11 @@ python -m data.binance_loader
 python -m examples.backtest_eurusd_bar_low_level_api
 python -m examples.backtest_eurusd_trade_high_level_api
 
-python examples/order_book_snapshot.py
 python examples/mock_orderbook.py
 python examples/mock_orderbook_depth.py
+
+python examples/order_book_snapshot.py
+python examples/evaluate_orders_report_with_vectorbt.py
 ```
 
 ## Todo
@@ -72,11 +74,14 @@ python examples/mock_orderbook_depth.py
 
 Example
 
-- Order Book Imbalance
+- Order Book Imbalance with limit order
   - [nautilus_trader/examples/backtest/crypto_orderbook_imbalance.py at develop · nautechsystems/nautilus_trader](https://github.com/nautechsystems/nautilus_trader/blob/develop/examples/backtest/crypto_orderbook_imbalance.py) - Use `BacktestEngine` ([low-level API](https://nautilustrader.io/docs/latest/getting_started/backtest_low_level/))
+  - [nautilus_trader/nautilus_trader/examples/strategies/orderbook_imbalance.py at develop · nautechsystems/nautilus_trader](https://github.com/nautechsystems/nautilus_trader/blob/develop/nautilus_trader/examples/strategies/orderbook_imbalance.py#L78)
   - [Backtest: Binance OrderBook data | NautilusTrader Documentation](https://nautilustrader.io/docs/latest/tutorials/backtest_binance_orderbook) - Use `ImportableStrategyConfig` and `BacktestNode` ([high-level API](https://nautilustrader.io/docs/latest/getting_started/backtest_high_level/))
 - Signal Strategy
   - [nautilus_trader/nautilus_trader/examples/strategies/signal_strategy.py at develop · nautechsystems/nautilus_trader](https://github.com/nautechsystems/nautilus_trader/blob/develop/nautilus_trader/examples/strategies/signal_strategy.py)
+- Bar Strategy with market order (minimal reproducible example)
+  - [nautilus_trader/examples/other/minimal_reproducible_example at develop · nautechsystems/nautilus_trader](https://github.com/nautechsystems/nautilus_trader/tree/develop/examples/other/minimal_reproducible_example)
 
 ### Data
 

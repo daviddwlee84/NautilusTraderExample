@@ -8,6 +8,7 @@ dependencies = [
     "black>=25.1.0",
     "ipdb>=0.13.13",
     "jupyterlab>=4.3.5",
+    "kaleido==0.2.0",
     "nautilus-trader>=1.212.0",
     "notebook>=7.3.2",
     "numpy>=2.1.3",
