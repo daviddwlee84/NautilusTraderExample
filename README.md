@@ -3,7 +3,9 @@
 [![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
 
 > - Recommend use PyCharm to edit Nautilus Trader's code for better auto-completion of Cython modules
-> - I use [`mamba`](https://github.com/mamba-org/mamba) (a faster `conda`) to manage Python version, and manage packages using `pip`
+> - I use [`uv`](https://github.com/astral-sh/uv) to manage Python version and manage packages at once. (Which is recommend [officially](https://nautilustrader.io/docs/latest/developer_guide/environment_setup))
+> - ~~I use [`mamba`](https://github.com/mamba-org/mamba) (a faster `conda`) to manage Python version, and manage packages using `pip`~~
+> - If you use Cursor, I recommend adding `https://nautilustrader.io/docs/latest/` to [Docs](https://docs.cursor.com/context/@-symbols/@-docs#manage-custom-docs)
 
 ## Getting Started
 
@@ -39,6 +41,10 @@ Examples
 python -m data.binance_loader
 python -m examples.backtest_eurusd_bar_low_level_api
 python -m examples.backtest_eurusd_trade_high_level_api
+
+python examples/order_book_snapshot.py
+python examples/mock_orderbook.py
+python examples/mock_orderbook_depth.py
 ```
 
 ## Todo
@@ -47,6 +53,7 @@ python -m examples.backtest_eurusd_trade_high_level_api
   - [X] Bar
   - [X] TradeTick
 - [X] Basic strategy backtesting using pre-defined data
+- [X] Manually construct order book snapshot and backtest
 - [ ] Try level 2 or higher order book data (Venue)
   - [ ] `L2_MBP`
   - [ ] `L3_MBO`

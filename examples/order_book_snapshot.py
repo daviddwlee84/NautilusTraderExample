@@ -2,7 +2,7 @@ from nautilus_trader.model import OrderBook
 from nautilus_trader.model import BookOrder
 from nautilus_trader.model import OrderBookDelta
 from nautilus_trader.model import OrderBookDepth10
-from nautilus_trader.model.enums import OrderSide, BookType
+from nautilus_trader.model.enums import OrderSide, BookType, TimeInForce
 from nautilus_trader.backtest.engine import BacktestEngine
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
 from nautilus_trader.trading.strategy import Strategy
@@ -15,6 +15,7 @@ from nautilus_trader.model import Money
 from nautilus_trader.backtest.models import FeeModel
 from nautilus_trader.model.objects import Price, Quantity
 from decimal import Decimal
+import random
 
 # Step 1: Define a simple instrument (e.g., BTC/USD on Binance)
 venue = Venue("BINANCE")
@@ -28,20 +29,21 @@ def create_order_book_snapshot(
     ts_init: int,
     sequence: int = 0,
     base_price: float = 19500.0,
+    min_quantity: int = 10000,
 ):
     # Generate mock prices around the base price (only 5 levels)
     bid_prices = [base_price * (1 - 0.001 * (level + 1)) for level in range(5)]
     ask_prices = [base_price * (1 + 0.001 * (level + 1)) for level in range(5)]
 
     # Generate mock sizes for 5 levels
-    bid_sizes = [1.0 + level * 0.5 for level in range(5)]
-    ask_sizes = [1.0 + level * 0.5 for level in range(5)]
+    bid_sizes = [min_quantity + level * min_quantity for level in range(5)]
+    ask_sizes = [min_quantity + level * min_quantity for level in range(5)]
 
     # Create BookOrder objects for active levels (first 5)
     bids = [
         BookOrder(
             side=OrderSide.BUY,
-            price=Price(Decimal(str(price)), 3),
+            price=Price(Decimal(str(price)), 5),
             size=Quantity(Decimal(str(size)), 1),
             order_id=sequence * 1000 + idx,
         )
@@ -53,7 +55,7 @@ def create_order_book_snapshot(
         [
             BookOrder(
                 side=OrderSide.BUY,
-                price=Price(Decimal(str(bid_prices[-1])), 3),
+                price=Price(Decimal(str(bid_prices[-1])), 5),
                 size=Quantity(Decimal("0"), 1),
                 order_id=sequence * 1000 + idx + 5,
             )
@@ -64,7 +66,7 @@ def create_order_book_snapshot(
     asks = [
         BookOrder(
             side=OrderSide.SELL,
-            price=Price(Decimal(str(price)), 3),
+            price=Price(Decimal(str(price)), 5),
             size=Quantity(Decimal(str(size)), 1),
             order_id=(sequence * 1000 + idx + 500),
         )
@@ -76,7 +78,7 @@ def create_order_book_snapshot(
         [
             BookOrder(
                 side=OrderSide.SELL,
-                price=Price(Decimal(str(ask_prices[-1])), 3),
+                price=Price(Decimal(str(ask_prices[-1])), 5),
                 size=Quantity(Decimal("0"), 1),
                 order_id=sequence * 1000 + idx + 505,
             )
@@ -122,7 +124,8 @@ def create_order_book_snapshot(
 
 # Step 3: Define a simple strategy
 class SimpleOrderBookStrategy(Strategy):
-    def __init__(self):
+
+    def __init__(self, instrument_id: str):
         super().__init__()
         self.instrument_id = instrument_id
 
@@ -166,6 +169,75 @@ class SimpleOrderBookStrategy(Strategy):
         self.log.info("\nFull Order Book:")
         # self.log.info("\n" + snapshot.pprint(num_levels=5))  # Show top 5 levels
         self.log.info("\n" + snapshot.pprint(num_levels=10))  # Show top 10 levels
+
+        # NOTE: we are not able to submit market orders when we only have order book?!
+        # NOTE: we are able to submit limit orders but somehow no cash changes?!
+        # NOTE: maybe it is completely fine since we can just backtest using the orders with VectorBT
+        # Randomly decide whether to place an order based on the snapshot
+        # if best_bid and best_ask and random.random() < 0.3:  # 30% chance to place order
+        if (
+            best_bid and best_ask and random.random() < 0.99
+        ):  # 99% chance to place order
+            # Randomly choose buy or sell
+            is_buy = random.random() < 0.5
+
+            if is_buy:
+                # Place a buy order slightly below best ask
+                # price = best_ask * Decimal("0.9995")  # 0.05% below ask
+                price = best_ask
+                size = Quantity(Decimal("1000"), precision=0)  # 1000 BTC
+
+                # Create the order using order factory
+                # https://nautilustrader.io/docs/latest/concepts/orders#market
+                # order = self.order_factory.market(
+                #     instrument_id=self.instrument_id,
+                #     order_side=OrderSide.BUY,
+                #     quantity=size,
+                # )
+
+                # Create limit order instead
+                order = self.order_factory.limit(
+                    instrument_id=self.instrument_id,
+                    order_side=OrderSide.BUY,
+                    quantity=size,
+                    price=price,  # Using the calculated price slightly below ask
+                    time_in_force=TimeInForce.FOK,  # Fill-or-Kill
+                )
+
+                # Submit the order
+                self.submit_order(order)
+                self.log.info(f"Submitted BUY LIMIT order: price={price}, size={size}")
+            else:
+                # Place a sell order slightly above best bid
+                # price = best_bid * Decimal("1.0005")  # 0.05% above bid
+                price = best_bid
+                size = Quantity(Decimal("1000"), precision=0)  # 1000 BTC
+                # [WARN] BACKTESTER-001.RiskEngine: SubmitOrder for O-20250312-120008-001-000-1 DENIED: quantity 0.1 invalid (precision 1 > 0)
+                # [WARN] BACKTESTER-001.SimpleOrderBookStrategy: <--[EVT] OrderDenied(instrument_id=BTC/USD.BINANCE, client_order_id=O-20250312-120008-001-000-1, reason='quantity 0.1 invalid (precision 1 > 0)')
+                # [WARN] BACKTESTER-001.RiskEngine: SubmitOrder for O-20250312-120009-001-000-8 DENIED: quantity 1 invalid (< minimum trade size of 1000)
+                # [WARN] BACKTESTER-001.SimpleOrderBookStrategy: <--[EVT] OrderDenied(instrument_id=BTC/USD.BINANCE, client_order_id=O-20250312-120003-001-000-2, reason='quantity 1 invalid (< minimum trade size of 1000)')
+                # [WARN] BACKTESTER-001.SimpleOrderBookStrategy: <--[EVT] OrderRejected(instrument_id=BTC/USD.BINANCE, client_order_id=O-20250312-120009-001-000-8, account_id=BINANCE-001, reason='no market for BTC/USD.BINANCE', ts_event=1741780809000000000)
+                # [WARN] BACKTESTER-001.SimpleOrderBookStrategy: <--[EVT] OrderRejected(instrument_id=BTC/USD.BINANCE, client_order_id=O-20250312-120009-001-000-8, account_id=BINANCE-001, reason='Invalid price precision for order O-20250312-120009-001-000-8, was 3 when BTC/USD.BINANCE price precision is 5', ts_event=1741780809000000000)
+
+                # Create the order using order factory
+                # order = self.order_factory.market(
+                #     instrument_id=self.instrument_id,
+                #     order_side=OrderSide.SELL,
+                #     quantity=size,
+                # )
+
+                # Create limit order instead
+                order = self.order_factory.limit(
+                    instrument_id=self.instrument_id,
+                    order_side=OrderSide.SELL,
+                    quantity=size,
+                    price=price,  # Using the calculated price slightly above bid
+                    time_in_force=TimeInForce.FOK,  # Fill-or-Kill
+                )
+
+                # Submit the order
+                self.submit_order(order)
+                self.log.info(f"Submitted SELL LIMIT order: price={price}, size={size}")
 
 
 # Step 4: Set up the backtest engine
@@ -217,8 +289,21 @@ order_book_snapshots = [
 engine.add_data(order_book_snapshots)
 
 # Add the strategy
-strategy = SimpleOrderBookStrategy()
+strategy = SimpleOrderBookStrategy(instrument_id=instrument_id)
 engine.add_strategy(strategy=strategy)
 
 # Step 5: Run the backtest
 engine.run(start=datetime(2025, 3, 12, 12, 0, 0), end=datetime(2025, 3, 12, 12, 1, 0))
+
+# Generate different types of reports
+print(order_fills_report := engine.trader.generate_order_fills_report())
+print(positions_report := engine.trader.generate_positions_report())
+print(account_report := engine.trader.generate_account_report(Venue("SIM")))
+print(orders_report := engine.trader.generate_orders_report())
+print(fills_report := engine.trader.generate_fills_report())
+
+# BlockingIOError: [Errno 35] write could not complete without blocking
+orders_report.to_csv("orders_report.csv")
+import ipdb
+
+ipdb.set_trace()
