@@ -23,38 +23,21 @@ instrument = TestInstrumentProvider.default_fx_ccy("BTC/USD", venue=venue)
 
 
 # Step 2: Create a 5-level order book snapshot
-# BUG
-# [ERROR] BACKTESTER-001.DataEngine: Cannot handle data: unrecognized type <class 'nautilus_trader.model.book.OrderBook'> OrderBook L3_MBO
-# instrument: BTC/USD.BINANCE
-# sequence: 0
-# ts_last: 1741780800000000000
-# update_count: 10
-# ╭──────┬─────────────┬──────╮
-# │ bids │ price       │ asks │
-# ├──────┼─────────────┼──────┤
-# │      │ 19530.00000 │ [1]  │
-# │      │ 19520.00000 │ [1]  │
-# │      │ 19510.00000 │ [1]  │
-# │ [1]  │ 19500.00000 │      │
-# │ [1]  │ 19490.00000 │      │
-# │ [1]  │ 19480.00000 │      │
-# ╰──────┴─────────────┴──────╯
 def create_order_book_snapshot(
     instrument_id: InstrumentId,
     ts_init: int,
     sequence: int = 0,
     base_price: float = 19500.0,
 ):
+    # Generate mock prices around the base price (only 5 levels)
+    bid_prices = [base_price * (1 - 0.001 * (level + 1)) for level in range(5)]
+    ask_prices = [base_price * (1 + 0.001 * (level + 1)) for level in range(5)]
 
-    # Generate mock prices around the base price
-    bid_prices = [base_price * (1 - 0.001 * (level + 1)) for level in range(10)]
-    ask_prices = [base_price * (1 + 0.001 * (level + 1)) for level in range(10)]
+    # Generate mock sizes for 5 levels
+    bid_sizes = [1.0 + level * 0.5 for level in range(5)]
+    ask_sizes = [1.0 + level * 0.5 for level in range(5)]
 
-    # Generate mock sizes (larger sizes at worse prices)
-    bid_sizes = [1.0 + level * 0.5 for level in range(10)]
-    ask_sizes = [1.0 + level * 0.5 for level in range(10)]
-
-    # Create BookOrder objects for bids and asks
+    # Create BookOrder objects for active levels (first 5)
     bids = [
         BookOrder(
             side=OrderSide.BUY,
@@ -64,6 +47,19 @@ def create_order_book_snapshot(
         )
         for idx, (price, size) in enumerate(zip(bid_prices, bid_sizes))
     ]
+
+    # Add empty orders for remaining levels (with zero quantity)
+    bids.extend(
+        [
+            BookOrder(
+                side=OrderSide.BUY,
+                price=Price(Decimal(str(bid_prices[-1])), 3),
+                size=Quantity(Decimal("0"), 1),
+                order_id=sequence * 1000 + idx + 5,
+            )
+            for idx in range(5)
+        ]
+    )
 
     asks = [
         BookOrder(
@@ -75,21 +71,51 @@ def create_order_book_snapshot(
         for idx, (price, size) in enumerate(zip(ask_prices, ask_sizes))
     ]
 
-    # Create timestamp in nanoseconds
+    # Add empty orders for remaining levels (with zero quantity)
+    asks.extend(
+        [
+            BookOrder(
+                side=OrderSide.SELL,
+                price=Price(Decimal(str(ask_prices[-1])), 3),
+                size=Quantity(Decimal("0"), 1),
+                order_id=sequence * 1000 + idx + 505,
+            )
+            for idx in range(5)
+        ]
+    )
+
     ts_now = ts_init
 
-    # Create the depth update
+    # https://nautilustrader.io/docs/latest/api_reference/model/book/
+    # https://nautilustrader.io/docs/latest/api_reference/model/data/#class-orderbookdepth10
     depth = OrderBookDepth10(
         instrument_id=instrument_id,
         bids=bids,
         asks=asks,
-        bid_counts=[5, 4, 3, 2, 1, 1, 1, 1, 1, 1],
-        ask_counts=[5, 4, 3, 2, 1, 1, 1, 1, 1, 1],
+        bid_counts=[5, 4, 3, 2, 1, 0, 0, 0, 0, 0],  # Only 5 levels have counts
+        ask_counts=[5, 4, 3, 2, 1, 0, 0, 0, 0, 0],  # Only 5 levels have counts
         flags=0,
         sequence=sequence,
         ts_event=ts_now,
         ts_init=ts_now,
     )
+
+    # BUG: we cannot only pass in 5 levels, we need to pass in 10 levels
+    # thread '<unnamed>' panicked at crates/model/src/enums.rs:844:18:
+    # Order invariant failed: side must be `Buy` or `Sell`
+    # note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+    # [1]    1411 abort      python examples/order_book_snapshot.py
+    # depth = OrderBookDepth10(
+    #     instrument_id=instrument_id,
+    #     bids=bids[:5],
+    #     asks=asks[:5],
+    #     bid_counts=[5, 4, 3, 2, 1, 0, 0, 0, 0, 0][:5],  # Only 5 levels have counts
+    #     ask_counts=[5, 4, 3, 2, 1, 0, 0, 0, 0, 0][:5],  # Only 5 levels have counts
+    #     flags=0,
+    #     sequence=sequence,
+    #     ts_event=ts_now,
+    #     ts_init=ts_now,
+    # )
 
     return depth
 
@@ -126,7 +152,9 @@ class SimpleOrderBookStrategy(Strategy):
 
         # Add more detailed logging
         self.log.info("Received order book snapshot:")
-        self.log.info(f"Timestamp: {snapshot.ts_event}")
+        self.log.info(
+            f"Timestamp: {datetime.fromtimestamp(snapshot.ts_event / 1e9).strftime('%Y-%m-%d %H:%M:%S.%f')}"
+        )
         self.log.info(f"Best Bid: {best_bid}, Best Ask: {best_ask}")
 
         if best_bid and best_ask:
@@ -136,7 +164,8 @@ class SimpleOrderBookStrategy(Strategy):
 
         # Optional: Print full order book depth
         self.log.info("\nFull Order Book:")
-        self.log.info("\n" + snapshot.pprint(num_levels=5))  # Show top 5 levels
+        # self.log.info("\n" + snapshot.pprint(num_levels=5))  # Show top 5 levels
+        self.log.info("\n" + snapshot.pprint(num_levels=10))  # Show top 10 levels
 
 
 # Step 4: Set up the backtest engine
@@ -183,7 +212,7 @@ order_book_snapshots = [
         sequence=i,
         base_price=19500.0 * (1 + (0.0002 * (-1 if i % 2 == 0 else 1))),
     )
-    for i in range(3)
+    for i in range(10)
 ]
 engine.add_data(order_book_snapshots)
 
