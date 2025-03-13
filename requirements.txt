@@ -1,7 +1,9 @@
 # main
-nautilus_trader
+nautilus_trader[binance]
 pandas
 numpy
+
+python-dotenv
 
 # Apple Silicon:
 # arch -arm64 brew install ta-lib

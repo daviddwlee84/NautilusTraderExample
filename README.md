@@ -42,6 +42,9 @@ python -m examples.backtest_eurusd_trade_high_level_api
   - [X] Bar
   - [X] TradeTick
 - [X] Basic strategy backtesting using pre-defined data
+- [ ] Try level 2 or higher order book data (Venue)
+  - [ ] `L2_MBP`
+  - [ ] `L3_MBO`
 - [ ] Custom data backtesting
 - [ ] Unify and use better column names (currently following binance-public-data repository's README)
 
@@ -69,5 +72,10 @@ Example
   - [How to Download Historical Market Data on Binance? | Binance Support](https://www.binance.com/en/support/faq/how-to-download-historical-market-data-on-binance-5810ae42176b4770b880ce1f14932262)
   - [binance/binance-public-data: Details on how to get Binance public data](https://github.com/binance/binance-public-data)
     - [Binance Data Collection](https://data.binance.vision/?prefix=data/spot/daily/trades/BTCUSDT/)
+  - [Binance API Management](https://www.binance.com/en/my/settings/api-management): to get the API Key and Secret Key
+  - Nautilus
+    - [Binance Integration | NautilusTrader Documentation](https://nautilustrader.io/docs/latest/integrations/binance)
+    - [Binance Adapter | NautilusTrader Documentation](https://nautilustrader.io/docs/latest/api_reference/adapters/binance/)
+    - [#python #nautilus-trader #backtest #data #future #binance #orderbook #kline](https://gist.github.com/seongs1024/237ed08e9dae5b55bdd5c7a320c9c477)
 - FX
   - [Download Free Forex Historical Data – HistData.com](https://www.histdata.com/download-free-forex-historical-data/?/ascii/tick-data-quotes/)

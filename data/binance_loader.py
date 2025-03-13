@@ -39,6 +39,10 @@ class BaseLoader:
     A base class to define the common structure for data loaders.
 
     NOTE: wranglers_v2 will return pyo3 object, while wranglers will return nautilus_trader.core.data.Data (which is required by engine)
+    https://nautilustrader.io/docs/latest/concepts/data#data-wranglers
+
+    At the risk of causing confusion, there are also a growing number of DataWrangler v2 components, which will take a pd.DataFrame typically with a different fixed width Nautilus arrow v2 schema, and output pyo3 Nautilus objects which are only compatible with the new version of the Nautilus core, currently in development.
+    These pyo3 provided data objects are not compatible where the legacy Cython objects are currently used (adding directly to a BacktestEngine etc).
     """
 
     def __init__(self, base_dir: str):
