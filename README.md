@@ -7,12 +7,17 @@
 
 ## Getting Started
 
-Python 3.11+
-
 ```bash
-pip install -r requirements.txt
-pip install -r submodules/binance-public-data/python/requirements.txt
+uv venv
+uv install
 ```
+
+> Python 3.11+
+>
+> ```bash
+> pip install -r requirements.txt
+> pip install -r submodules/binance-public-data/python/requirements.txt
+> ```
 
 Data
 
