@@ -1,5 +1,7 @@
 from nautilus_trader.model import OrderBook
 from nautilus_trader.model import BookOrder
+from nautilus_trader.model import OrderBookDelta
+from nautilus_trader.model import OrderBookDepth10
 from nautilus_trader.model.enums import OrderSide, BookType
 from nautilus_trader.backtest.engine import BacktestEngine
 from nautilus_trader.test_kit.providers import TestInstrumentProvider
@@ -12,6 +14,7 @@ from nautilus_trader.model.currencies import USD
 from nautilus_trader.model import Money
 from nautilus_trader.backtest.models import FeeModel
 from nautilus_trader.model.objects import Price, Quantity
+from decimal import Decimal
 
 # Step 1: Define a simple instrument (e.g., BTC/USD on Binance)
 venue = Venue("BINANCE")
@@ -36,50 +39,59 @@ instrument = TestInstrumentProvider.default_fx_ccy("BTC/USD", venue=venue)
 # │ [1]  │ 19490.00000 │      │
 # │ [1]  │ 19480.00000 │      │
 # ╰──────┴─────────────┴──────╯
-def create_order_book_snapshot(instrument_id: InstrumentId, ts_init: int):
-    order_book = OrderBook(
+def create_order_book_snapshot(
+    instrument_id: InstrumentId,
+    ts_init: int,
+    sequence: int = 0,
+    base_price: float = 19500.0,
+):
+
+    # Generate mock prices around the base price
+    bid_prices = [base_price * (1 - 0.001 * (level + 1)) for level in range(10)]
+    ask_prices = [base_price * (1 + 0.001 * (level + 1)) for level in range(10)]
+
+    # Generate mock sizes (larger sizes at worse prices)
+    bid_sizes = [1.0 + level * 0.5 for level in range(10)]
+    ask_sizes = [1.0 + level * 0.5 for level in range(10)]
+
+    # Create BookOrder objects for bids and asks
+    bids = [
+        BookOrder(
+            side=OrderSide.BUY,
+            price=Price(Decimal(str(price)), 3),
+            size=Quantity(Decimal(str(size)), 1),
+            order_id=sequence * 1000 + idx,
+        )
+        for idx, (price, size) in enumerate(zip(bid_prices, bid_sizes))
+    ]
+
+    asks = [
+        BookOrder(
+            side=OrderSide.SELL,
+            price=Price(Decimal(str(price)), 3),
+            size=Quantity(Decimal(str(size)), 1),
+            order_id=(sequence * 1000 + idx + 500),
+        )
+        for idx, (price, size) in enumerate(zip(ask_prices, ask_sizes))
+    ]
+
+    # Create timestamp in nanoseconds
+    ts_now = ts_init
+
+    # Create the depth update
+    depth = OrderBookDepth10(
         instrument_id=instrument_id,
-        # book_type=BookType.L2_MBP,  # Level 2 Market By Price
-        book_type=BookType.L3_MBO,  # Level 3 Market By Order
+        bids=bids,
+        asks=asks,
+        bid_counts=[5, 4, 3, 2, 1, 1, 1, 1, 1, 1],
+        ask_counts=[5, 4, 3, 2, 1, 1, 1, 1, 1, 1],
+        flags=0,
+        sequence=sequence,
+        ts_event=ts_now,
+        ts_init=ts_now,
     )
 
-    # Simulated 5-level bid and ask data (price, volume)
-    bids = [
-        (19500.0, 1.0),  # Level 1
-        (19490.0, 0.8),  # Level 2
-        (19480.0, 0.6),  # Level 3
-        (19470.0, 0.5),  # Level 4
-        (19460.0, 0.4),  # Level 5
-    ]
-    asks = [
-        (19510.0, 1.2),  # Level 1
-        (19520.0, 0.9),  # Level 2
-        (19530.0, 0.7),  # Level 3
-        (19540.0, 0.6),  # Level 4
-        (19550.0, 0.5),  # Level 5
-    ]
-
-    # Add bids
-    for i, (price, volume) in enumerate(bids):
-        order = BookOrder(
-            price=Price(price, instrument.price_precision),
-            size=Quantity(volume, instrument.size_precision),
-            side=OrderSide.BUY,
-            order_id=i,
-        )
-        order_book.add(order, ts_init)
-
-    # Add asks
-    for i, (price, volume) in enumerate(asks, start=len(bids)):
-        order = BookOrder(
-            price=Price(price, instrument.price_precision),
-            size=Quantity(volume, instrument.size_precision),
-            side=OrderSide.SELL,
-            order_id=i,
-        )
-        order_book.add(order, ts_init)
-
-    return order_book
+    return depth
 
 
 # Step 3: Define a simple strategy
@@ -90,7 +102,7 @@ class SimpleOrderBookStrategy(Strategy):
 
     def on_start(self):
         """Called when the strategy starts."""
-        # Subscribe to order book data
+        self.log.info("Strategy starting...")
         self.subscribe_order_book_at_interval(
             self.instrument_id, book_type=BookType.L2_MBP
         )
@@ -101,7 +113,7 @@ class SimpleOrderBookStrategy(Strategy):
         # Unsubscribe from data
         self.unsubscribe_order_book_deltas(self.instrument_id)
 
-    def on_order_book_delta(self, delta) -> None:
+    def on_order_book_delta(self, delta: OrderBookDelta) -> None:
         """Called when order book delta is received."""
         # Process order book delta updates
         self.log.info(f"Received order book delta: {delta}")
@@ -111,13 +123,24 @@ class SimpleOrderBookStrategy(Strategy):
         # Process the complete order book snapshot
         best_bid = snapshot.best_bid_price()
         best_ask = snapshot.best_ask_price()
+
+        # Add more detailed logging
+        self.log.info("Received order book snapshot:")
+        self.log.info(f"Timestamp: {snapshot.ts_event}")
         self.log.info(f"Best Bid: {best_bid}, Best Ask: {best_ask}")
-        if best_bid and best_ask:  # Check if we have both bid and ask prices
+
+        if best_bid and best_ask:
             mid_price = (best_bid + best_ask) / 2
-            self.log.info(f"Mid Price: {mid_price}")
+            spread = best_ask - best_bid
+            self.log.info(f"Mid Price: {mid_price:.2f}, Spread: {spread:.2f}")
+
+        # Optional: Print full order book depth
+        self.log.info("\nFull Order Book:")
+        self.log.info("\n" + snapshot.pprint(num_levels=5))  # Show top 5 levels
 
 
 # Step 4: Set up the backtest engine
+# https://nautilustrader.io/docs/latest/concepts/logging/
 engine = BacktestEngine()
 
 # Add venue and instrument
@@ -153,8 +176,16 @@ engine.add_instrument(instrument)
 
 # Create and add the order book snapshot
 ts_init = dt_to_unix_nanos(datetime(2025, 3, 12, 12, 0, 0))
-order_book_snapshot = create_order_book_snapshot(instrument_id, ts_init)
-engine.add_data([order_book_snapshot])
+order_book_snapshots = [
+    create_order_book_snapshot(
+        instrument_id,
+        ts_init + i * 1_000_000_000,
+        sequence=i,
+        base_price=19500.0 * (1 + (0.0002 * (-1 if i % 2 == 0 else 1))),
+    )
+    for i in range(3)
+]
+engine.add_data(order_book_snapshots)
 
 # Add the strategy
 strategy = SimpleOrderBookStrategy()
