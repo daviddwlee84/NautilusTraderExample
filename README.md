@@ -56,11 +56,12 @@ python examples/evaluate_orders_report_with_vectorbt.py
   - [X] TradeTick
 - [X] Basic strategy backtesting using pre-defined data
 - [X] Manually construct order book snapshot and backtest
-- [ ] Try level 2 or higher order book data (Venue)
+- [ ] Try level 2 or higher order book data (Venue) => understand how the matching mechanism works (for different order types)
   - [ ] `L2_MBP`
   - [ ] `L3_MBO`
-- [ ] Custom data backtesting
+- [ ] Custom data backtesting => generate limit orders report is enough?!
 - [ ] Unify and use better column names (currently following binance-public-data repository's README)
+- [ ] Follow the refactor of Cython to PyO3
 
 ## Resources
 
@@ -68,6 +69,8 @@ python examples/evaluate_orders_report_with_vectorbt.py
 
 - [NautilusTrader](https://nautilustrader.io/)
   - [nautechsystems/nautilus_trader: A high-performance algorithmic trading platform and event-driven backtester](https://github.com/nautechsystems/nautilus_trader)
+    - [Roadmap](https://github.com/nautechsystems/nautilus_trader/blob/develop/ROADMAP.md)
+    - [Kanban](https://github.com/orgs/nautechsystems/projects/3)
   - [nautechsystems/nautilus_data: Example data for use with NautilusTrader](https://github.com/nautechsystems/nautilus_data/)
   - [Discord](https://discord.com/invite/AUWVs3XaCS)
   - [Home · Loren1166/NautilusTrader- Wiki](https://github.com/Loren1166/NautilusTrader-/wiki) (Chinese documents)
